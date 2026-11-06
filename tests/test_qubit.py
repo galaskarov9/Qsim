@@ -1,8 +1,6 @@
 import numpy as np
 from qsim.qubit import Qubit
-
-X = np.array([[0, 1], [1, 0]], dtype=complex)
-H = np.array([[1, 1], [1, -1]], dtype=complex) / np.sqrt(2)
+from qsim.gates import X, H
 
 def test_qubit_initialization():
     qubit = Qubit()
