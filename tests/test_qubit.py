@@ -45,4 +45,8 @@ def test_qubit_measurement_randomness():
         if result == 0:
             zero_count += 1
     assert 400 < zero_count < 600  # Expect roughly half to be 0
-    
+
+def test_complex_qubit_X():
+    qubit = Qubit(state=np.array([0.8j, 0.6], dtype=complex))
+    qubit.apply_gate(X)
+    assert np.allclose(qubit.state, np.array([0.6, 0.8j], dtype=complex))
