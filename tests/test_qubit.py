@@ -48,3 +48,10 @@ def test_complex_qubit_X():
     qubit = Qubit(state=np.array([0.8j, 0.6], dtype=complex))
     qubit.apply_gate(X)
     assert np.allclose(qubit.state, np.array([0.6, 0.8j], dtype=complex))
+
+def test_sum_of_probabilities():
+    qubit = Qubit()
+    for gate in [X, H, H@X, X@H]:
+        qubit.apply_gate(gate)
+    probs = qubit.probabilities()
+    assert np.isclose(np.sum(probs), 1.0)
