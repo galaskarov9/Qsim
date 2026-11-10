@@ -25,6 +25,7 @@ class StateVector:
     def apply_gate(self, gate, target):
         if target < 0 or target >= self.num_qubits:
             raise ValueError("Target qubit index out of range.")
+        
         distance = 2 ** target
         size = len(self.state)
         block_size = distance * 2
@@ -40,5 +41,34 @@ class StateVector:
     def probabilities(self):
         return np.abs(self.state) ** 2
 
-    def measure(self, qubit_index):
-        pass
+    def measure(self):
+        probabilities = self.probabilities()
+        index = self.rng.choice(len(self.state), p=probabilities)
+        self.state = np.zeros_like(self.state)
+        self.state[index] = 1
+        return index
+
+    def measure_single(self, target):
+        if target < 0 or target >= self.num_qubits:
+            raise ValueError("Target qubit index out of range.")
+        
+        probabilities = self.probabilities()
+        size = len(self.state)
+        distance = 2 ** target
+        block_size = distance * 2
+        prob_0 = 0.0
+        for block in range(0, size, block_size):
+            for i in range(distance):
+                first_cell = block + i
+                prob_0 += probabilities[first_cell]
+        r = self.rng.random()
+        for block in range(0, size, block_size):
+            for i in range(distance):
+                first_cell = block + i
+                second_cell = first_cell + distance
+                if r < prob_0:
+                    self.state[second_cell] = 0
+                else:
+                    self.state[first_cell] = 0
+        self.state /= np.linalg.norm(self.state)
+        return 0 if r < prob_0 else 1
