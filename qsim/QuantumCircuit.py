@@ -35,7 +35,18 @@ class QuantumCircuit:
         return sv
 
     def sample(self, shots):
-        ...
+
+        if not isinstance(shots, int) or shots <= 0:
+            raise ValueError("Number of shots must be a positive integer.")
+        
+        sv = self.apply_circuit()
+        probabilities = sv.probabilities()
+        indices = sv.rng.choice(len(probabilities), size=shots, p=probabilities)
+        counts = {}
+        for index in indices:
+            bitstring = format(index, f'0{self.num_qubits}b')
+            counts[bitstring] = counts.get(bitstring, 0) + 1
+        return counts
 
     def __str__(self):
         first_line = f"Quantum Circuit with {self.num_qubits} qubits and {len(self.gates)} gates."
