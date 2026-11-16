@@ -8,7 +8,7 @@ def test_circuit_runs_gates_in_order():
     c = QuantumCircuit(2)
     c.add_gate(H, 0, "H")
     c.add_gate(X, 1, "X")
-    sv = c.apply_gates()
+    sv = c.apply_circuit()
     expected_state = np.array([0, 0, 1/np.sqrt(2), 1/np.sqrt(2)], dtype=complex)
     assert np.allclose(sv.state, expected_state), "wrong state after H on 0 and X on 1"
 
@@ -16,8 +16,8 @@ def test_circuit_runs_gates_in_order():
 def test_circuit_runs_twice_same_result():
     c = QuantumCircuit(1)
     c.add_gate(X, 0, "X")
-    first = c.apply_gates()
-    second = c.apply_gates()
+    first = c.apply_circuit()
+    second = c.apply_circuit()
     assert np.allclose(first.state, [0, 1]), "first run is wrong"
     assert np.allclose(second.state, [0, 1]), "second run should give the same result"
 
@@ -26,7 +26,7 @@ def test_circuit_does_not_change_given_state():
     initial = StateVector(1)
     c = QuantumCircuit(state_vector=initial)
     c.add_gate(X, 0, "X")
-    c.apply_gates()
+    c.apply_circuit()
     assert np.allclose(initial.state, [1, 0]), "circuit changed the state vector it was given"
 
 
@@ -42,7 +42,7 @@ def test_ten_qubits_h_on_all():
     c = QuantumCircuit(10)
     for q in range(10):
         c.add_gate(H, q, "H")
-    sv = c.apply_gates()
+    sv = c.apply_circuit()
     expected_state = np.full(1024, 1/32, dtype=complex)
     assert np.allclose(sv.state, expected_state), "H on all qubits should give uniform state"
 
@@ -50,7 +50,7 @@ def test_circuit_with_controlled_gate():
     c = QuantumCircuit(2)
     c.add_gate(H, 1, "H")
     c.add_gate(X, 0, "CNOT", control=1)
-    sv = c.apply_gates()
+    sv = c.apply_circuit()
     expected_state = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)], dtype=complex)
     assert np.allclose(sv.state, expected_state), "circuit should create entangled state"
 
@@ -75,7 +75,7 @@ def test_ten_qubit_entangled_chain():
     c.add_gate(H, 0, "H")
     for q in range(9):
         c.add_gate(X, q + 1, "CNOT", control=q)
-    sv = c.apply_gates()
+    sv = c.apply_circuit()
     expected_state = np.zeros(1024, dtype=complex)
     expected_state[0] = 1/np.sqrt(2)
     expected_state[1023] = 1/np.sqrt(2)

@@ -25,7 +25,7 @@ class QuantumCircuit:
 
         self.gates.append((gate, target, gate_name, control))
 
-    def apply_gates(self):
+    def apply_circuit(self):
         sv = StateVector(self.num_qubits, self.state_vector.state, self.state_vector.rng)
         for gate, target, _, control in self.gates:
             if control is None:
@@ -33,6 +33,9 @@ class QuantumCircuit:
             else:
                 sv.apply_controlled_gate(gate, control, target)
         return sv
+
+    def sample(self, shots):
+        ...
 
     def __str__(self):
         first_line = f"Quantum Circuit with {self.num_qubits} qubits and {len(self.gates)} gates."
