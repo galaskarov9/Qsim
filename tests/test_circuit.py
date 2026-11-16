@@ -45,3 +45,38 @@ def test_ten_qubits_h_on_all():
     sv = c.apply_gates()
     expected_state = np.full(1024, 1/32, dtype=complex)
     assert np.allclose(sv.state, expected_state), "H on all qubits should give uniform state"
+
+def test_circuit_with_controlled_gate():
+    c = QuantumCircuit(2)
+    c.add_gate(H, 1, "H")
+    c.add_gate(X, 0, "CNOT", control=1)
+    sv = c.apply_gates()
+    expected_state = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)], dtype=complex)
+    assert np.allclose(sv.state, expected_state), "circuit should create entangled state"
+
+
+def test_circuit_invalid_control():
+    c = QuantumCircuit(2)
+    try:
+        c.add_gate(X, 0, "CNOT", control=0)
+        assert False, "same control and target should raise an error"
+    except ValueError:
+        pass
+
+
+def test_circuit_print_with_control():
+    c = QuantumCircuit(2)
+    c.add_gate(X, 0, "CNOT", control=1)
+    assert "controlled by qubit 1" in str(c), "print should show the control qubit"
+
+
+def test_ten_qubit_entangled_chain():
+    c = QuantumCircuit(10)
+    c.add_gate(H, 0, "H")
+    for q in range(9):
+        c.add_gate(X, q + 1, "CNOT", control=q)
+    sv = c.apply_gates()
+    expected_state = np.zeros(1024, dtype=complex)
+    expected_state[0] = 1/np.sqrt(2)
+    expected_state[1023] = 1/np.sqrt(2)
+    assert np.allclose(sv.state, expected_state), "chain should give all zeros or all ones"

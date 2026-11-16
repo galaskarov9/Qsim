@@ -1,6 +1,6 @@
 import numpy as np
 from qsim.state_vector import StateVector
-from qsim.gates import X, H
+from qsim.gates import X, H, Y, Z, S, T, Rx, Ry, I
 
 def test_statevector_initialization():
     assert np.allclose(StateVector(2).state, np.array([1, 0, 0, 0], dtype=complex)), "Failed to initialize state vector for 2 qubits"
@@ -100,3 +100,53 @@ def test_measure_single_entangled():
         a = sv.measure_single(0)
         b = sv.measure_single(1)
         assert a == b, f"entangled qubits gave different results: {a}, {b}"
+
+def test_controlled_x_control_zero():
+    sv = StateVector(2)
+    sv.apply_controlled_gate(X, 1, 0)
+    assert np.allclose(sv.state, [1, 0, 0, 0]), "control is 0, nothing should change"
+
+
+def test_controlled_x_control_one():
+    sv = StateVector(2, state=[0, 0, 1, 0])
+    sv.apply_controlled_gate(X, 1, 0)
+    assert np.allclose(sv.state, [0, 0, 0, 1]), "control is 1, target should flip"
+
+
+def test_controlled_x_reversed_roles():
+    sv = StateVector(2, state=[0, 1, 0, 0])
+    sv.apply_controlled_gate(X, 0, 1)
+    assert np.allclose(sv.state, [0, 0, 0, 1]), "qubit 0 controls, qubit 1 should flip"
+
+
+def test_controlled_x_creates_entanglement():
+    sv = StateVector(2)
+    sv.apply_gate(H, 1)
+    sv.apply_controlled_gate(X, 1, 0)
+    expected_state = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)], dtype=complex)
+    assert np.allclose(sv.state, expected_state), "H then controlled X should give entangled state"
+
+
+def test_controlled_gate_invalid_qubits():
+    sv = StateVector(2)
+    for control, target in [(1, 1), (2, 0), (0, 2), (-1, 0)]:
+        try:
+            sv.apply_controlled_gate(X, control, target)
+            assert False, f"control {control}, target {target} should raise an error"
+        except ValueError:
+            pass
+
+def test_controlled_x_far_qubits():
+    sv = StateVector(4)
+    sv.apply_gate(X, 0)
+    sv.apply_gate(X, 3)
+    sv.apply_controlled_gate(X, 3, 1)
+    expected_state = np.zeros(16, dtype=complex)
+    expected_state[11] = 1
+    assert np.allclose(sv.state, expected_state), "cell 9 should move to cell 11"
+
+def test_controlled_h():
+    sv = StateVector(2, state=[0, 0, 1, 0])
+    sv.apply_controlled_gate(H, 1, 0)
+    expected_state = np.array([0, 0, 1/np.sqrt(2), 1/np.sqrt(2)], dtype=complex)
+    assert np.allclose(sv.state, expected_state), "controlled H with control 1 should act on target"

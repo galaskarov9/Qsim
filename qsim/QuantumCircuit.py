@@ -13,19 +13,33 @@ class QuantumCircuit:
         self.num_qubits = self.state_vector.num_qubits
         self.gates = []
 
-    def add_gate(self, gate, target, gate_name=None):
+    def add_gate(self, gate, target, gate_name=None, control=None):
         if target < 0 or target >= self.num_qubits:
             raise ValueError("Target qubit index out of range.")
-        
-        self.gates.append((gate, target, gate_name))
+
+        if control is not None:
+            if control < 0 or control >= self.num_qubits:
+                raise ValueError("Control qubit index out of range.")
+            if control == target:
+                raise ValueError("Control and target qubits must be different.")
+
+        self.gates.append((gate, target, gate_name, control))
 
     def apply_gates(self):
         sv = StateVector(self.num_qubits, self.state_vector.state, self.state_vector.rng)
-        for gate, target, _ in self.gates:
-            sv.apply_gate(gate, target)
+        for gate, target, _, control in self.gates:
+            if control is None:
+                sv.apply_gate(gate, target)
+            else:
+                sv.apply_controlled_gate(gate, control, target)
         return sv
 
     def __str__(self):
         first_line = f"Quantum Circuit with {self.num_qubits} qubits and {len(self.gates)} gates."
-        gate_lines = [f"  - {gate_name or 'Unnamed Gate'} on qubit {target}" for _, target, gate_name in self.gates]
+        gate_lines = []
+        for _, target, gate_name, control in self.gates:
+            if control is None:
+                gate_lines.append(f"{gate_name or 'Unnamed Gate'} on qubit {target}")
+            else:
+                gate_lines.append(f"{gate_name or 'Unnamed Controlled Gate'} on qubit {target} controlled by qubit {control}")
         return "\n".join([first_line] + gate_lines)

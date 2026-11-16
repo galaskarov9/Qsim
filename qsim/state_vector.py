@@ -1,4 +1,5 @@
 import numpy as np
+from qsim.qubit import Qubit
 
 class StateVector:
     def __init__(self, num_qubits, state=None, rng=None):
@@ -37,6 +38,31 @@ class StateVector:
                 new_vector = gate @ temp_vector
                 self.state[first_cell] = new_vector[0]
                 self.state[second_cell] = new_vector[1]
+
+    def apply_controlled_gate(self, gate, control, target):
+        if control < 0 or control >= self.num_qubits:
+            raise ValueError("Control qubit index out of range.")
+
+        if target < 0 or target >= self.num_qubits:
+            raise ValueError("Target qubit index out of range.")
+
+        if control == target:
+            raise ValueError("Control and target qubits must be different.")
+
+        
+        distance = 2 ** target
+        size = len(self.state)
+        block_size = distance * 2
+        for block in range(0, size, block_size):
+            for i in range(distance):
+                first_cell = block + i
+                second_cell = first_cell + distance
+                if (first_cell // 2 ** control) % 2 == 1:
+                    temp_vector = np.array([self.state[first_cell], self.state[second_cell]], dtype=complex)
+                    new_vector = gate @ temp_vector
+                    self.state[first_cell] = new_vector[0]
+                    self.state[second_cell] = new_vector[1]
+                    
 
     def probabilities(self):
         return np.abs(self.state) ** 2
