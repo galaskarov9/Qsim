@@ -37,3 +37,11 @@ def test_add_gate_invalid_target():
         assert False, "adding a gate on a missing qubit should raise an error"
     except ValueError:
         pass
+
+def test_ten_qubits_h_on_all():
+    c = QuantumCircuit(10)
+    for q in range(10):
+        c.add_gate(H, q, "H")
+    sv = c.apply_gates()
+    expected_state = np.full(1024, 1/32, dtype=complex)
+    assert np.allclose(sv.state, expected_state), "H on all qubits should give uniform state"
