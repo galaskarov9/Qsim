@@ -80,3 +80,10 @@ def test_ten_qubit_entangled_chain():
     expected_state[0] = 1/np.sqrt(2)
     expected_state[1023] = 1/np.sqrt(2)
     assert np.allclose(sv.state, expected_state), "chain should give all zeros or all ones"
+
+def test_swap():
+    c = QuantumCircuit(2)
+    c.add_gate(X, 0, "X")
+    c.add_swap_gate(0, 1)
+    sv = c.apply_circuit()
+    assert np.allclose(sv.state, [0, 0, 1, 0]), "SWAP should move 01 to 10"
