@@ -1,5 +1,6 @@
 import numpy as np
 from qsim.state_vector import StateVector
+from qsim.gates import X
 
 class QuantumCircuit:
     def __init__(self, num_qubits=None, state_vector=None, rng=None):
@@ -24,6 +25,20 @@ class QuantumCircuit:
                 raise ValueError("Control and target qubits must be different.")
 
         self.gates.append((gate, target, gate_name, control))
+
+    def add_swap_gate(self, qubit1, qubit2):
+        if qubit1 < 0 or qubit1 >= self.num_qubits:
+            raise ValueError("Qubit1 index out of range.")
+        
+        if qubit2 < 0 or qubit2 >= self.num_qubits:
+            raise ValueError("Qubit2 index out of range.")
+        
+        if qubit1 == qubit2:
+            raise ValueError("Qubit1 and Qubit2 must be different.")
+
+        self.add_gate(X, qubit1, gate_name="SWAP(1/3)", control=qubit2)
+        self.add_gate(X, qubit2, gate_name="SWAP(2/3)", control=qubit1)
+        self.add_gate(X, qubit1, gate_name="SWAP(3/3)", control=qubit2)
 
     def apply_circuit(self):
         sv = StateVector(self.num_qubits, self.state_vector.state, self.state_vector.rng)
