@@ -48,7 +48,6 @@ class StateVector:
 
         if control == target:
             raise ValueError("Control and target qubits must be different.")
-
         
         distance = 2 ** target
         size = len(self.state)
@@ -62,6 +61,12 @@ class StateVector:
                     new_vector = gate @ temp_vector
                     self.state[first_cell] = new_vector[0]
                     self.state[second_cell] = new_vector[1]
+
+    def apply_full_matrix(self, matrix):
+            if matrix.shape != (2 ** self.num_qubits, 2 ** self.num_qubits):
+                raise ValueError("Matrix must be of shape (2^num_qubits, 2^num_qubits).")
+            
+            self.state = matrix @ self.state
                     
 
     def probabilities(self):

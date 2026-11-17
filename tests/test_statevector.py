@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from qsim.state_vector import StateVector
 from qsim.gates import X, H, Y, Z, S, T, Rx, Ry, I
 
@@ -150,3 +151,21 @@ def test_controlled_h():
     sv.apply_controlled_gate(H, 1, 0)
     expected_state = np.array([0, 0, 1/np.sqrt(2), 1/np.sqrt(2)], dtype=complex)
     assert np.allclose(sv.state, expected_state), "controlled H with control 1 should act on target"
+
+def test_apply_full_matrix_flips_sign_of_marked_state():
+    sv = StateVector(2)
+    sv.state = np.array([0.5, 0.5, 0.5, 0.5], dtype=complex)
+
+    oracle = np.diag([1, 1, 1, -1])
+    sv.apply_full_matrix(oracle)
+
+    expected = np.array([0.5, 0.5, 0.5, -0.5], dtype=complex)
+    assert np.allclose(sv.state, expected)
+
+
+def test_apply_full_matrix_raises_on_wrong_shape():
+    sv = StateVector(2)
+    wrong_matrix = np.eye(2)
+
+    with pytest.raises(ValueError):
+        sv.apply_full_matrix(wrong_matrix)
