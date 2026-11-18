@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from qsim.QuantumCircuit import QuantumCircuit
 from qsim.state_vector import StateVector
 from qsim.gates import X, H
@@ -125,3 +126,69 @@ def test_circuit_print_without_control():
     c.add_gate(X, 0, "X")
     assert "controlled" not in str(c), \
         "a gate with no controls should not mention controls"
+
+def test_add_gate_with_multiple_targets_adds_one_gate_per_target():
+    c = QuantumCircuit(3)
+    c.add_gate(X, [0, 1, 2], "X")
+    assert len(c.gates) == 3, "three targets should add three separate gates"
+
+
+def test_circuit_with_multiple_targets_applies_gate_to_each():
+    c = QuantumCircuit(2)
+    c.add_gate(X, [0, 1], "X")
+    sv = c.apply_circuit()
+
+    expected = np.zeros(4, dtype=complex)
+    expected[3] = 1
+    assert np.allclose(sv.state, expected), \
+        "X on both qubits should move 00 to 11"
+
+
+def test_circuit_with_multiple_targets_and_control_is_one():
+    c = QuantumCircuit(3)
+    c.add_gate(X, 0, "X")
+    c.add_gate(X, [1, 2], "CNOT", controls=0)
+    sv = c.apply_circuit()
+
+    expected = np.zeros(8, dtype=complex)
+    expected[7] = 1
+    assert np.allclose(sv.state, expected), \
+        "control is 1, so both targets should flip: 001 -> 111"
+
+
+def test_circuit_with_multiple_targets_and_control_is_zero():
+    c = QuantumCircuit(3)
+    c.add_gate(X, [1, 2], "CNOT", controls=0)
+    sv = c.apply_circuit()
+
+    expected = np.zeros(8, dtype=complex)
+    expected[0] = 1
+    assert np.allclose(sv.state, expected), \
+        "control is 0, so nothing should change: 000 stays 000"
+
+
+def test_add_gate_raises_when_any_target_is_also_control():
+    c = QuantumCircuit(3)
+    with pytest.raises(ValueError):
+        c.add_gate(X, [1, 2], "X", controls=[1])
+
+
+def test_add_gate_raises_on_empty_targets():
+    c = QuantumCircuit(2)
+    with pytest.raises(ValueError):
+        c.add_gate(X, [], "X")
+    with pytest.raises(ValueError):
+        c.add_gate(X, (), "X")
+
+
+def test_add_gate_raises_on_duplicate_targets():
+    c = QuantumCircuit(3)
+    with pytest.raises(ValueError):
+        c.add_gate(X, [1, 1], "X")
+
+
+def test_add_gate_does_not_add_anything_when_invalid():
+    c = QuantumCircuit(3)
+    with pytest.raises(ValueError):
+        c.add_gate(X, [0, 1, 5], "X")
+    assert len(c.gates) == 0, "an invalid call should not leave partial gates in the circuit"

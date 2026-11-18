@@ -14,16 +14,30 @@ class QuantumCircuit:
         self.num_qubits = self.state_vector.num_qubits
         self.gates = []
 
-    def add_gate(self, gate, target, gate_name=None, controls=None):
+    def add_gate(self, gate, targets, gate_name=None, controls=None):
+        if targets is None:
+            raise ValueError("Must choose at least one target qubit")
         if controls is None:
             controls_list = []
         elif isinstance(controls, (int, np.integer)):
             controls_list = [controls]
         else:
             controls_list = list(controls)
+        
+        if isinstance(targets, (int ,np.integer)):
+            targets_list = [targets]
+        else:
+            targets_list = list(targets)
 
-        if target < 0 or target >= self.num_qubits:
-            raise ValueError("Target qubit index out of range.")
+        if targets_list == []:
+            raise ValueError("Must choose at least one target qubit")
+        for target in targets_list:
+            if not isinstance(target, (int, np.integer)):
+                raise ValueError("All targets must be non-negative integers")
+            if target < 0 or target >= self.num_qubits:
+                raise ValueError("At least one target qubit index out of range.")
+        if len(targets_list) != len(set(targets_list)):
+            raise ValueError("All targets must be unique")
 
         
         for control in controls_list:
@@ -31,12 +45,14 @@ class QuantumCircuit:
                 raise ValueError("All controls must be non-negative integers")
             if control < 0 or control >= self.num_qubits:
                 raise ValueError("At least one of the controls is out of range")
-            if control == target:
-                raise ValueError("Control and target qubits must be different.")
+            for target in targets_list:
+                if control == target:
+                    raise ValueError("Controls and targets qubits must be different.")
         if len(controls_list) != len(set(controls_list)):
             raise ValueError("All controls must be unique")
 
-        self.gates.append((gate, target, gate_name, controls_list))
+        for target in targets_list:
+            self.gates.append((gate, target, gate_name, controls_list))
 
     def add_swap_gate(self, qubit1, qubit2):
         if qubit1 < 0 or qubit1 >= self.num_qubits:
