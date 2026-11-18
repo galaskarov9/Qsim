@@ -14,17 +14,29 @@ class QuantumCircuit:
         self.num_qubits = self.state_vector.num_qubits
         self.gates = []
 
-    def add_gate(self, gate, target, gate_name=None, control=None):
+    def add_gate(self, gate, target, gate_name=None, controls=None):
+        if controls is None:
+            controls_list = []
+        elif isinstance(controls, (int, np.integer)):
+            controls_list = [controls]
+        else:
+            controls_list = list(controls)
+
         if target < 0 or target >= self.num_qubits:
             raise ValueError("Target qubit index out of range.")
 
-        if control is not None:
+        
+        for control in controls_list:
+            if not isinstance(control, (int, np.integer)):
+                raise ValueError("All controls must be non-negative integers")
             if control < 0 or control >= self.num_qubits:
-                raise ValueError("Control qubit index out of range.")
+                raise ValueError("At least one of the controls is out of range")
             if control == target:
                 raise ValueError("Control and target qubits must be different.")
+        if len(controls_list) != len(set(controls_list)):
+            raise ValueError("All controls must be unique")
 
-        self.gates.append((gate, target, gate_name, control))
+        self.gates.append((gate, target, gate_name, controls_list))
 
     def add_swap_gate(self, qubit1, qubit2):
         if qubit1 < 0 or qubit1 >= self.num_qubits:
@@ -36,17 +48,17 @@ class QuantumCircuit:
         if qubit1 == qubit2:
             raise ValueError("Qubit1 and Qubit2 must be different.")
 
-        self.add_gate(X, qubit1, gate_name="SWAP(1/3)", control=qubit2)
-        self.add_gate(X, qubit2, gate_name="SWAP(2/3)", control=qubit1)
-        self.add_gate(X, qubit1, gate_name="SWAP(3/3)", control=qubit2)
+        self.add_gate(X, qubit1, gate_name="SWAP(1/3)", controls=qubit2)
+        self.add_gate(X, qubit2, gate_name="SWAP(2/3)", controls=qubit1)
+        self.add_gate(X, qubit1, gate_name="SWAP(3/3)", controls=qubit2)
 
     def apply_circuit(self):
         sv = StateVector(self.num_qubits, self.state_vector.state, self.state_vector.rng)
-        for gate, target, _, control in self.gates:
-            if control is None:
+        for gate, target, _, controls in self.gates:
+            if controls == []:
                 sv.apply_gate(gate, target)
             else:
-                sv.apply_controlled_gate(gate, control, target)
+                sv.apply_multi_controlled_gate(gate, controls, target)
         return sv
 
     def sample(self, shots):
@@ -66,9 +78,12 @@ class QuantumCircuit:
     def __str__(self):
         first_line = f"Quantum Circuit with {self.num_qubits} qubits and {len(self.gates)} gates."
         gate_lines = []
-        for _, target, gate_name, control in self.gates:
-            if control is None:
+        for _, target, gate_name, controls in self.gates:
+            if controls == []:
                 gate_lines.append(f"{gate_name or 'Unnamed Gate'} on qubit {target}")
+            elif len(controls) == 1:
+                gate_lines.append(f"{gate_name or 'Unnamed Controlled Gate'} on qubit {target} controlled by qubit {controls[0]}")
             else:
-                gate_lines.append(f"{gate_name or 'Unnamed Controlled Gate'} on qubit {target} controlled by qubit {control}")
+                controls_text = ", ".join(str(control) for control in controls)
+                gate_lines.append(f"{gate_name or 'Unnamed Multi Controlled Gate'} on qubit {target} controlled by qubits {controls_text}")
         return "\n".join([first_line] + gate_lines)

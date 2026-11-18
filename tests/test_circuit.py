@@ -49,7 +49,7 @@ def test_ten_qubits_h_on_all():
 def test_circuit_with_controlled_gate():
     c = QuantumCircuit(2)
     c.add_gate(H, 1, "H")
-    c.add_gate(X, 0, "CNOT", control=1)
+    c.add_gate(X, 0, "CNOT", controls=1)
     sv = c.apply_circuit()
     expected_state = np.array([1/np.sqrt(2), 0, 0, 1/np.sqrt(2)], dtype=complex)
     assert np.allclose(sv.state, expected_state), "circuit should create entangled state"
@@ -58,7 +58,7 @@ def test_circuit_with_controlled_gate():
 def test_circuit_invalid_control():
     c = QuantumCircuit(2)
     try:
-        c.add_gate(X, 0, "CNOT", control=0)
+        c.add_gate(X, 0, "CNOT", controls=0)
         assert False, "same control and target should raise an error"
     except ValueError:
         pass
@@ -66,7 +66,7 @@ def test_circuit_invalid_control():
 
 def test_circuit_print_with_control():
     c = QuantumCircuit(2)
-    c.add_gate(X, 0, "CNOT", control=1)
+    c.add_gate(X, 0, "CNOT", controls=1)
     assert "controlled by qubit 1" in str(c), "print should show the control qubit"
 
 
@@ -74,7 +74,7 @@ def test_ten_qubit_entangled_chain():
     c = QuantumCircuit(10)
     c.add_gate(H, 0, "H")
     for q in range(9):
-        c.add_gate(X, q + 1, "CNOT", control=q)
+        c.add_gate(X, q + 1, "CNOT", controls=q)
     sv = c.apply_circuit()
     expected_state = np.zeros(1024, dtype=complex)
     expected_state[0] = 1/np.sqrt(2)
@@ -87,3 +87,41 @@ def test_swap():
     c.add_swap_gate(0, 1)
     sv = c.apply_circuit()
     assert np.allclose(sv.state, [0, 0, 1, 0]), "SWAP should move 01 to 10"
+
+def test_circuit_with_toffoli_flips_target_when_controls_are_one():
+    c = QuantumCircuit(3)
+    c.add_gate(X, 0, "X")
+    c.add_gate(X, 1, "X")
+    c.add_gate(X, 2, "Toffoli", controls=[0, 1])
+    sv = c.apply_circuit()
+
+    expected = np.zeros(8, dtype=complex)
+    expected[7] = 1
+    assert np.allclose(sv.state, expected), \
+        "both controls are 1, so Toffoli should flip target: 011 -> 111"
+
+
+def test_circuit_with_toffoli_does_nothing_when_one_control_is_zero():
+    c = QuantumCircuit(3)
+    c.add_gate(X, 0, "X")
+    c.add_gate(X, 2, "Toffoli", controls=[0, 1])
+    sv = c.apply_circuit()
+
+    expected = np.zeros(8, dtype=complex)
+    expected[1] = 1
+    assert np.allclose(sv.state, expected), \
+        "control 1 is 0, so Toffoli should do nothing: 001 stays 001"
+
+
+def test_circuit_print_with_multiple_controls():
+    c = QuantumCircuit(3)
+    c.add_gate(X, 2, "Toffoli", controls=[0, 1])
+    assert "controlled by qubits 0, 1" in str(c), \
+        "print should list all control qubits"
+
+
+def test_circuit_print_without_control():
+    c = QuantumCircuit(2)
+    c.add_gate(X, 0, "X")
+    assert "controlled" not in str(c), \
+        "a gate with no controls should not mention controls"
