@@ -10,7 +10,7 @@ def print_state(sv):
 
 c = QuantumCircuit(2)
 c.add_gate(H, 1, "H")
-c.add_gate(X, 0, "CNOT", control=1)
+c.add_gate(X, 0, "CNOT", controls=1)
 
 print(c)
 print()
