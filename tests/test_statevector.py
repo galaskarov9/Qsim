@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from qsim.state_vector import StateVector
 from qsim.gates import X, H, Y, Z, S, T, Rx, Ry, I
 
@@ -150,3 +151,96 @@ def test_controlled_h():
     sv.apply_controlled_gate(H, 1, 0)
     expected_state = np.array([0, 0, 1/np.sqrt(2), 1/np.sqrt(2)], dtype=complex)
     assert np.allclose(sv.state, expected_state), "controlled H with control 1 should act on target"
+
+def test_apply_full_matrix_flips_sign_of_marked_state():
+    sv = StateVector(2)
+    sv.state = np.array([0.5, 0.5, 0.5, 0.5], dtype=complex)
+
+    oracle = np.diag([1, 1, 1, -1])
+    sv.apply_full_matrix(oracle)
+
+    expected = np.array([0.5, 0.5, 0.5, -0.5], dtype=complex)
+    assert np.allclose(sv.state, expected)
+
+
+def test_apply_full_matrix_raises_on_wrong_shape():
+    sv = StateVector(2)
+    wrong_matrix = np.eye(2)
+
+    with pytest.raises(ValueError):
+        sv.apply_full_matrix(wrong_matrix)
+
+def basis_state(n, index):
+    sv = StateVector(n)
+    sv.state = np.zeros(2**n, dtype=complex)
+    sv.state[index] = 1
+    return sv
+
+def test_multi_controlled_with_no_controls_acts_like_single_gate():
+    sv = basis_state(2, 0)
+    sv.apply_multi_controlled_gate(X, [], 1)
+    assert np.allclose(sv.state, basis_state(2, 2).state), \
+        "with no controls, X on qubit 1 should move 00 to 10"
+
+
+def test_multi_controlled_with_one_control_acts_like_cnot():
+    sv = basis_state(2, 1)
+    sv.apply_multi_controlled_gate(X, [0], 1)
+    assert np.allclose(sv.state, basis_state(2, 3).state), \
+        "control 0 is 1, so target 1 should flip: 01 -> 11"
+
+
+def test_toffoli_flips_target_when_both_controls_are_one():
+    sv = basis_state(3, 3)
+    sv.apply_multi_controlled_gate(X, [0, 1], 2)
+    assert np.allclose(sv.state, basis_state(3, 7).state), \
+        "controls 0 and 1 are both 1, so target 2 should flip: 011 -> 111"
+
+
+def test_toffoli_does_nothing_when_one_control_is_zero():
+    sv = basis_state(3, 1)
+    sv.apply_multi_controlled_gate(X, [0, 1], 2)
+    assert np.allclose(sv.state, basis_state(3, 1).state), \
+        "control 1 is 0, so nothing should change: 001 stays 001"
+
+
+def test_multi_controlled_with_non_adjacent_qubits():
+    sv = basis_state(4, 9)
+    sv.apply_multi_controlled_gate(X, [0, 3], 1)
+    assert np.allclose(sv.state, basis_state(4, 11).state), \
+        "controls 0 and 3 are 1, so target 1 should flip: 1001 -> 1011"
+
+
+def test_multi_controlled_z_flips_only_last_state():
+    sv = StateVector(3)
+    sv.state = np.full(8, 1 / np.sqrt(8), dtype=complex)
+    sv.apply_multi_controlled_gate(Z, [0, 1], 2)
+
+    expected = np.full(8, 1 / np.sqrt(8), dtype=complex)
+    expected[7] *= -1
+    assert np.allclose(sv.state, expected), \
+        "multi-controlled Z should flip only the sign of 111"
+
+
+def test_multi_controlled_raises_on_wrong_gate_shape():
+    sv = StateVector(3)
+    with pytest.raises(ValueError):
+        sv.apply_multi_controlled_gate(np.eye(4), [0], 1)
+
+
+def test_multi_controlled_raises_when_target_is_also_control():
+    sv = StateVector(3)
+    with pytest.raises(ValueError):
+        sv.apply_multi_controlled_gate(X, [0, 2], 2)
+
+
+def test_multi_controlled_raises_on_duplicate_controls():
+    sv = StateVector(3)
+    with pytest.raises(ValueError):
+        sv.apply_multi_controlled_gate(X, [0, 0], 2)
+
+
+def test_multi_controlled_raises_on_out_of_range_qubit():
+    sv = StateVector(3)
+    with pytest.raises(ValueError):
+        sv.apply_multi_controlled_gate(X, [0, 5], 2)

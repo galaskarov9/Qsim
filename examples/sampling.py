@@ -5,8 +5,8 @@ from qsim.gates import H, X
 
 c = QuantumCircuit(3)
 c.add_gate(H, 0, "H")
-c.add_gate(X, 1, "CNOT", control=0)
-c.add_gate(X, 2, "CNOT", control=1)
+c.add_gate(X, 1, "CNOT", controls=0)
+c.add_gate(X, 2, "CNOT", controls=1)
 
 print(c)
 print()
