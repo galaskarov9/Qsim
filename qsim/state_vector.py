@@ -2,7 +2,7 @@ import numpy as np
 from qsim.qubit import Qubit
 
 class StateVector:
-    def __init__(self, num_qubits, state=None, rng=None):
+    def __init__(self, num_qubits, state=None, rng=None): #FIXME: Add an option for num_qubits = None
         state = np.array(state, dtype=complex) if state is not None else None
         
         if state is not None and len(state) != 2 ** num_qubits:
