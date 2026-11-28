@@ -11,6 +11,7 @@ A state-vector quantum computer simulator written in Python with NumPy, built wi
 - **Sampling:** run a circuit for many shots and get counts, as on real quantum hardware
 - **Reproducible randomness:** every random operation uses an injectable NumPy random generator
 - **Grover's search algorithm:** find marked inputs of any boolean function `f(x)` with roughly √N oracle queries
+- **Quantum Fourier transform:** QFT and inverse QFT on any list of qubits in a circuit
 
 Gates are applied directly to pairs of amplitudes rather than by building full 2^n × 2^n matrices, so memory and time stay linear in the size of the state vector.
 
@@ -49,6 +50,34 @@ print(sv.probabilities().round(3))
 # [0.008 0.008 0.008 0.008 0.008 0.945 0.008 0.008]
 ```
 
+## Quantum Fourier transform
+`qft(circuit, qubits_list)` adds the gates of the quantum Fourier transform to a circuit, acting on the qubits in `qubits_list`. `inverse_qft(circuit, qubits_list)` adds the gates of its inverse.
+
+For `n` qubits and `N = 2^n`, the QFT maps each basis state `|x>` to
+
+```
+|x>  ->  1/√N · Σ_y e^(2πi·xy/N) |y>
+```
+
+The circuit is built from H gates, controlled phase gates P(π/2^k), and SWAPs that reverse the qubit order at the end. The inverse applies the same gates in reverse order with negated phases.
+
+- The first qubit in `qubits_list` is treated as the least significant bit of `x`, so the order of the list matters.
+- Qubits not in the list are left unchanged, so the QFT can run on part of a larger register.
+- A `ValueError` is raised if `qubits_list` contains a qubit twice or a qubit outside the circuit.
+
+```python
+from qsim.QuantumCircuit import QuantumCircuit
+from qsim.algorithms.qft import qft, inverse_qft
+from qsim.gates import X
+
+c = QuantumCircuit(3)
+c.add_gate(X, 0, "X")       # start in |001>
+qft(c, [0, 1, 2])
+inverse_qft(c, [0, 1, 2])   # undo the QFT
+print(c.apply_circuit().probabilities().round(3))
+# [0. 1. 0. 0. 0. 0. 0. 0.]
+```
+
 ## Project structure
 ```
 qsim/
@@ -59,6 +88,7 @@ qsim/
   algorithms/
     grover.py          Grover's search and the diffuser
     oracles.py         phase oracle built from a boolean function
+    qft.py             quantum Fourier transform and its inverse
 tests/                 unit tests
 examples/              runnable demonstrations
 ```
@@ -71,6 +101,7 @@ python -m examples.measure_state_vector
 python -m examples.sampling
 python -m examples.grover_secret_number
 python -m examples.grover_modular_square
+python -m examples.qft_period_finding
 ```
 
 | Example | What it shows |
@@ -81,6 +112,7 @@ python -m examples.grover_modular_square
 | sampling | Sampling a 3-qubit entangled state and comparing counts to exact probabilities |
 | grover_secret_number | Grover's search for one secret number among 16: after 3 iterations it is measured with probability ≈ 0.96 |
 | grover_modular_square | Grover's search with several solutions: the 4 values of x with x² mod 16 = 9, found with certainty after 1 iteration |
+| qft_period_finding | The QFT turns a periodic state with period 4 into peaks at multiples of 16/4, whatever the offset, and the period is recovered from a few measurements |
 
 ## Testing
 ```
@@ -88,4 +120,4 @@ pip install numpy pytest
 pytest
 ```
 
-The tests include checks against independent computations: gate application on 10 qubits is compared to the tensor product of single-qubit states, and controlled gates are compared to full matrices built from projectors for every control/target pair. Grover's algorithm has tests for the oracle and the diffuser, the success probability with one or several solutions, overshooting with too many iterations, and invalid input.
+The tests include checks against independent computations: gate application on 10 qubits is compared to the tensor product of single-qubit states, and controlled gates are compared to full matrices built from projectors for every control/target pair. Grover's algorithm has tests for the oracle and the diffuser, the success probability with one or several solutions, overshooting with too many iterations, and invalid input. The QFT and inverse QFT are compared to the full DFT matrix and its inverse for 1 to 4 qubits, and tested for undoing each other, running on part of a register, qubit order, and invalid input.
